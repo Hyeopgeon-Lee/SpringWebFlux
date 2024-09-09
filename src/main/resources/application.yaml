@@ -1,0 +1,21 @@
+spring:
+  r2dbc:
+    url: r2dbc:mariadb://localhost:3306/myDB
+    username: poly
+    password: 1234
+
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+  webflux:
+    view:
+      prefix: classpath:/templates/
+      suffix: .html
+
+    
+server:
+  port: 11000
+
+
+
