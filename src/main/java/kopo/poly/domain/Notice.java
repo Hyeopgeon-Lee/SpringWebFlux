@@ -17,7 +17,7 @@ public class Notice {
 
     @Id
     @Column("notice_seq")
-    private Long noticeSeq; // R2DBC에서는 자동 생성 전략을 별도로 처리해야 합니다.
+    private Long noticeSeq; // R2DBC 자동 생성 전략을 별도로 처리해야 함
 
     @NonNull
     @Column("title")

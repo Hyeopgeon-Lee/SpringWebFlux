@@ -60,9 +60,11 @@ public class DateUtil {
      */
     public static LocalDateTime stringToLocalDateTime(String dateTimeString, String format) {
         try {
+            String date = CmmUtil.nvl(dateTimeString, getDateTime(format)); // 날짜 값이 없으면, 현재 날짜를 가져옴
+
             DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern(format);
 
-            return LocalDateTime.parse(dateTimeString, FORMATTER);
+            return LocalDateTime.parse(date, FORMATTER);
         } catch (DateTimeParseException e) {
             // 변환에 실패한 경우 예외 처리
             throw new IllegalArgumentException("Invalid date format, expected 'yyyy-MM-dd HH:mm:ss'", e);

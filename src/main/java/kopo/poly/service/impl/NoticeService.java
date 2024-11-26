@@ -39,15 +39,18 @@ public class NoticeService implements INoticeService {
         return noticeRepository.findByNoticeSeq(pDTO.noticeSeq())
                 .flatMap(rEntity -> {
                     if (type) {
+                        // 조회수 증가 후 다시 데이터 조회
                         return noticeRepository.updateReadCnt(pDTO.noticeSeq())
-                                .thenReturn(rEntity); // 조회수 증가 후 반환
+                                .then(noticeRepository.findByNoticeSeq(pDTO.noticeSeq()));
                     } else {
-                        return Mono.just(rEntity); // 조회수 증가 없이 반환
+                        // 조회수 증가 없이 바로 반환
+                        return Mono.just(rEntity);
                     }
                 })
-                .map(NoticeDTO::from)
+                .map(NoticeDTO::from) // 명시적 캐스팅 제거
                 .doFinally(signalType -> log.info("getNoticeInfo End!"));
     }
+
 
     @Override
     public Mono<Void> updateNoticeInfo(NoticeDTO pDTO) {

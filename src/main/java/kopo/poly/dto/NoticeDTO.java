@@ -1,6 +1,7 @@
 package kopo.poly.dto;
 
 import kopo.poly.domain.Notice;
+import kopo.poly.util.CmmUtil;
 import kopo.poly.util.DateUtil;
 import lombok.Builder;
 
@@ -60,10 +61,10 @@ public record NoticeDTO(
                 .noticeYn(dto.noticeYn())
                 .contents(dto.contents())
                 .userId(dto.userId())
-                .readCnt(dto.readCnt())
-                .regId(dto.regId())
+                .readCnt(CmmUtil.nvl(dto.readCnt(), 0L))
+                .regId(CmmUtil.nvl(dto.regId(), dto.userId))
                 .regDt(DateUtil.stringToLocalDateTime(dto.regDt()))
-                .chgId(dto.chgId())
+                .chgId(CmmUtil.nvl(dto.chgId(), dto.userId))
                 .chgDt(DateUtil.stringToLocalDateTime(dto.chgDt()))
                 .build();
     }

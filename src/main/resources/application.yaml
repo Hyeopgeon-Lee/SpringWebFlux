@@ -8,12 +8,7 @@ spring:
     prefix: classpath:/templates/
     suffix: .html
     cache: false
-  webflux:
-    view:
-      prefix: classpath:/templates/
-      suffix: .html
 
-    
 server:
   port: 11000
 

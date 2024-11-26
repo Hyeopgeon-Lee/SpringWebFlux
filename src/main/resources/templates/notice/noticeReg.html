@@ -15,21 +15,11 @@
             })
         })
 
-        //글자 길이 바이트 단위로 체크하기(바이트값 전달)
-        function calBytes(str) {
-            let tcount = 0;
-            let tmpStr = String(str);
-            let strCnt = tmpStr.length;
-            let onechar;
-            for (let i = 0; i < strCnt; i++) {
-                onechar = tmpStr.charAt(i);
-                if (escape(onechar).length > 4) {
-                    tcount += 2;
-                } else {
-                    tcount += 1;
-                }
-            }
-            return tcount;
+        // 글자 길이를 바이트 단위로 계산
+        function calculateBytes(str) {
+            return [...str].reduce((total, char) => {
+                return total + (char.charCodeAt(0) > 127 ? 2 : 1);
+            }, 0);
         }
 
         // 공지사항 저장하기
@@ -42,19 +32,14 @@
                 f.title.focus();
                 return;
             }
-            if (calBytes(f.title.value) > 200) {
+            if (calculateBytes(f.title.value) > 200) {
                 alert("최대 200Bytes까지 입력 가능합니다.");
                 f.title.focus();
                 return;
             }
-            let noticeCheck = false; //체크 여부 확인 변수
-            for (let i = 0; i < f.noticeYn.length; i++) {
-                if (f.noticeYn[i].checked) {
-                    noticeCheck = true;
-                    break;
-                }
-            }
-            if (noticeCheck === false) {
+
+            const noticeChecked = Array.from(f.noticeYn).some(input => input.checked);
+            if (noticeChecked === false) {
                 alert("공지글 여부를 선택하시기 바랍니다.");
                 f.noticeYn[0].focus();
                 return;
@@ -64,7 +49,7 @@
                 f.contents.focus();
                 return;
             }
-            if (calBytes(f.contents.value) > 4000) {
+            if (calculateBytes(f.contents.value) > 4000) {
                 alert("최대 4000Bytes까지 입력 가능합니다.");
                 f.contents.focus();
                 return;
@@ -72,17 +57,23 @@
 
             // Ajax 호출해서 글 등록하기
             $.ajax({
-                    url: "/notice/noticeInsert",
-                    type: "post", // 전송방식은 Post
-                    // contentType: "application/json",
-                    dataType: "JSON", // 전송 결과는 JSON으로 받기
-                    data: $("#f").serialize(), // form 태그 내 input 등 객체를 자동으로 전송할 형태로 변경하기
-                    success: function (json) { // /notice/noticeInsert 호출이 성공했다면..
-                        alert(json.msg); // 메시지 띄우기
-                        location.href = "/noticeList"; // 공지사항 리스트 이동
-                    }
+                url: "/notice/noticeInsert",
+                type: "POST", // 전송 방식은 POST
+                dataType: "JSON", // 전송 결과는 JSON으로 받기
+                data: $("#f").serialize() // form 태그 내 input 등 객체를 자동으로 직렬화
+
+            }).then(
+                function (response) {
+                    // 성공 콜백
+                    alert(response.msg); // 메시지 띄우기
+                    location.href = "/notice/noticeList"; // 공지사항 리스트 이동
+                },
+                function () {
+                    // 실패 콜백
+                    alert("공지사항 등록 중 오류가 발생했습니다. 다시 시도해 주세요.");
                 }
-            )
+            );
+
         }
     </script>
 </head>
