@@ -40,9 +40,11 @@ public record NoticeDTO(
                 .userId(notice.getUserId())
                 .readCnt(notice.getReadCnt())
                 .regId(notice.getRegId())
-                .regDt(Optional.ofNullable(notice.getRegDt()).map(dt -> dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).orElse(null))
+                .regDt(Optional.ofNullable(notice.getRegDt()).map(dt ->
+                        dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).orElse(null))
                 .chgId(notice.getChgId())
-                .chgDt(Optional.ofNullable(notice.getChgDt()).map(dt -> dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).orElse(null))
+                .chgDt(Optional.ofNullable(notice.getChgDt()).map(dt ->
+                        dt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).orElse(null))
                 .build();
     }
 
