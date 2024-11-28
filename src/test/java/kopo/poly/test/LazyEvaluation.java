@@ -2,7 +2,7 @@ package kopo.poly.test;
 
 import reactor.core.publisher.Mono;
 
-public class MonoTest {
+public class LazyEvaluation {
 
     public static void main(String[] args) {
 
