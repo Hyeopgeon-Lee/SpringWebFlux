@@ -11,7 +11,10 @@ MariaDB의 r2dbc를 적용하여 DB 비동기화도 적용하였습니다.
 * 빅데이터학과 입학 상담 오픈채팅방 : https://open.kakao.com/o/gEd0JIad
 
 ## 주요 실습 내용
-1. WebFlux를 활용한 MariaDB 기반 r2dbc 서비스 구현
+1. 리엑티브 프로그래밍 이해
+2. Mono와 Flux 이해 및 실습
+3. map, flatmap, flatMapSequential 함수 이해
+4. WebFlux를 활용한 MariaDB 기반 r2dbc 공지사항 게시판 서비스 구현
 
 ## 주요 적용 프레임워크
 * Spring Boot Frameworks, WebFlux, r2dbc
