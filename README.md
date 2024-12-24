@@ -76,8 +76,8 @@ spring:
 ### 4. 애플리케이션 실행
 - 아래 명령어를 실행하여 애플리케이션을 시작합니다.
 
-  ```bash
-  ./gradlew bootRun
+```bash
+./gradlew bootRun
 ```
 
 
