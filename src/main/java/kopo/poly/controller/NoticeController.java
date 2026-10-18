@@ -1,188 +1,144 @@
 package kopo.poly.controller;
 
+import java.nio.charset.StandardCharsets;
 import kopo.poly.dto.MsgDTO;
 import kopo.poly.dto.NoticeDTO;
 import kopo.poly.service.INoticeService;
-import kopo.poly.util.CmmUtil;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-@Slf4j
-@RequestMapping(value = "/notice")
-@RequiredArgsConstructor
 @Controller
+@RequestMapping("/notice")
 public class NoticeController {
 
     private final INoticeService noticeService;
+    private final String demoUserId;
 
-    /**
-     * 게시판 리스트 보여주기
-     *
-     * @param exchange ServerWebExchange 객체 (세션 및 요청 데이터 사용)
-     * @param model    Spring MVC Model 객체 (View에 데이터 전달)
-     * @return 공지사항 리스트를 보여주는 페이지(View 이름)
-     */
-    @GetMapping(value = "noticeList")
-    public Mono<String> noticeList(ServerWebExchange exchange, Model model) {
-        log.info("{}.noticeList Start!", getClass().getName());
+    // 로그인 기능이 없는 공개 CRUD 실습용 공용 사용자 (실제 인증이 아님).
+    public NoticeController(INoticeService noticeService,
+                            @Value("${app.demo-user-id:USER01}") String demoUserId) {
+        this.noticeService = noticeService;
+        this.demoUserId = demoUserId;
+    }
 
-        // 세션에 사용자 정보 저장 후 공지사항 리스트를 조회
-        return exchange.getSession()
-                .doOnNext(session -> session.getAttributes().put("SESSION_USER_ID", "USER01"))
-                .then(noticeService.getNoticeList().collectList())
-                .map(rList -> {
-                    model.addAttribute("rList", rList);
-                    log.info("{}.noticeList End!", getClass().getName());
+    @GetMapping("/noticeList")
+    public Mono<String> noticeList(Model model) {
+        return noticeService.getNoticeList().collectList()
+                .map(notices -> {
+                    model.addAttribute("rList", notices);
                     return "notice/noticeList";
                 });
     }
 
-    /**
-     * 게시판 작성 페이지 이동
-     *
-     * @return 게시판 작성 페이지(View 이름)
-     */
-    @GetMapping(value = "noticeReg")
+    @GetMapping("/noticeReg")
     public Mono<String> noticeReg() {
-        log.info("{}.noticeReg Start and End!", getClass().getName());
         return Mono.just("notice/noticeReg");
     }
 
-    /**
-     * 게시판 글 등록
-     *
-     * @param exchange ServerWebExchange 객체 (세션 및 Form 데이터 사용)
-     * @return 등록 완료 메시지를 포함한 DTO(MsgDTO)
-     */
     @ResponseBody
-    @PostMapping(value = "noticeInsert")
+    @PostMapping("/noticeInsert")
     public Mono<MsgDTO> noticeInsert(ServerWebExchange exchange) {
-        log.info("{}.noticeInsert Start!", getClass().getName());
-
-        // 세션에서 사용자 정보를 가져오고 Form 데이터를 NoticeDTO로 변환하여 저장
-        return exchange.getSession()
-                .flatMap(session -> exchange.getFormData().map(formData -> {
-                    String userId = CmmUtil.nvl(session.getAttribute("SESSION_USER_ID"));
-                    NoticeDTO pDTO = NoticeDTO.builder()
-                            .userId(userId)
-                            .title(CmmUtil.nvl(formData.getFirst("title")))
-                            .noticeYn(CmmUtil.nvl(formData.getFirst("noticeYn")))
-                            .contents(CmmUtil.nvl(formData.getFirst("contents")))
-                            .build();
-                    log.info("DTO: {}", pDTO);
-                    return pDTO;
-                }))
-                .flatMap(noticeService::insertNoticeInfo)
-                .thenReturn(MsgDTO.builder().msg("등록되었습니다.").build())
-                .doFinally(signalType -> log.info("{}.noticeInsert End!", getClass().getName()));
-    }
-
-    /**
-     * 게시판 상세보기
-     *
-     * @param exchange ServerWebExchange 객체 (요청 파라미터 사용)
-     * @param model    Spring MVC Model 객체 (View에 데이터 전달)
-     * @return 공지사항 상세보기 페이지(View 이름)
-     */
-    @GetMapping(value = "noticeInfo")
-    public Mono<String> noticeInfo(ServerWebExchange exchange, Model model) {
-        log.info("{}.noticeInfo Start!", getClass().getName());
-
-        // 요청 파라미터에서 nSeq 값을 가져와 공지사항 상세 정보를 조회
-        return Mono.justOrEmpty(exchange.getRequest().getQueryParams().getFirst("nSeq"))
-                .map(nSeq -> CmmUtil.nvl(nSeq, "0"))
-                .flatMap(nSeq -> {
-                    NoticeDTO pDTO = NoticeDTO.builder().noticeSeq(Long.parseLong(nSeq)).build();
-                    return noticeService.getNoticeInfo(pDTO, true)
-                            .map(rDTO -> {
-                                model.addAttribute("rDTO", rDTO);
-                                return "notice/noticeInfo";
-                            });
-                })
-                .doFinally(signalType -> log.info("{}.noticeInfo End!", getClass().getName()));
-    }
-
-    /**
-     * 게시판 수정보기
-     *
-     * @param exchange ServerWebExchange 객체 (요청 파라미터 사용)
-     * @param model    Spring MVC Model 객체 (View에 데이터 전달)
-     * @return 공지사항 수정 페이지(View 이름)
-     */
-    @GetMapping(value = "noticeEditInfo")
-    public Mono<String> noticeEditInfo(ServerWebExchange exchange, Model model) {
-        log.info("{}.noticeEditInfo Start!", getClass().getName());
-
-        // 요청 파라미터에서 nSeq 값을 가져와 공지사항 정보를 조회
-        return Mono.justOrEmpty(exchange.getRequest().getQueryParams().getFirst("nSeq"))
-                .map(nSeq -> CmmUtil.nvl(nSeq, "0"))
-                .flatMap(nSeq -> {
-                    NoticeDTO pDTO = NoticeDTO.builder().noticeSeq(Long.parseLong(nSeq)).build();
-                    return noticeService.getNoticeInfo(pDTO, false)
-                            .map(rDTO -> {
-                                model.addAttribute("rDTO", rDTO);
-                                return "notice/noticeEditInfo";
-                            });
-                })
-                .doFinally(signalType -> log.info("{}.noticeEditInfo End!", getClass().getName()));
-    }
-
-    /**
-     * 게시판 글 수정
-     *
-     * @param exchange ServerWebExchange 객체 (세션 및 Form 데이터 사용)
-     * @return 수정 완료 메시지를 포함한 DTO(MsgDTO)
-     */
-    @ResponseBody
-    @PostMapping(value = "noticeUpdate")
-    public Mono<MsgDTO> noticeUpdate(ServerWebExchange exchange) {
-        log.info("{}.noticeUpdate Start!", getClass().getName());
-
-        // 세션에서 사용자 정보를 가져오고 Form 데이터를 NoticeDTO로 변환하여 수정
-        return exchange.getSession()
-                .flatMap(session -> exchange.getFormData().map(formData -> {
-                    String userId = CmmUtil.nvl(session.getAttribute("SESSION_USER_ID"));
-                    NoticeDTO pDTO = NoticeDTO.builder()
-                            .userId(userId)
-                            .noticeSeq(Long.parseLong(CmmUtil.nvl(formData.getFirst("nSeq"))))
-                            .title(CmmUtil.nvl(formData.getFirst("title")))
-                            .noticeYn(CmmUtil.nvl(formData.getFirst("noticeYn")))
-                            .contents(CmmUtil.nvl(formData.getFirst("contents")))
-                            .build();
-                    log.info("DTO: {}", pDTO);
-                    return pDTO;
-                }))
-                .flatMap(noticeService::updateNoticeInfo)
-                .thenReturn(MsgDTO.builder().msg("수정되었습니다.").build())
-                .doFinally(signalType -> log.info("{}.noticeUpdate End!", getClass().getName()));
-    }
-
-    /**
-     * 게시판 글 삭제
-     *
-     * @param exchange ServerWebExchange 객체 (Form 데이터 사용)
-     * @return 삭제 완료 메시지를 포함한 DTO(MsgDTO)
-     */
-    @ResponseBody
-    @PostMapping(value = "noticeDelete")
-    public Mono<MsgDTO> noticeDelete(ServerWebExchange exchange) {
-        log.info("{}.noticeDelete Start!", getClass().getName());
-
-        // Form 데이터에서 nSeq 값을 가져와 공지사항을 삭제
         return exchange.getFormData()
-                .map(formData -> NoticeDTO.builder()
-                        .noticeSeq(Long.parseLong(CmmUtil.nvl(formData.getFirst("nSeq"))))
-                        .build())
+                .map(form -> toNotice(form, false))
+                .flatMap(noticeService::insertNoticeInfo)
+                .thenReturn(success("등록되었습니다."));
+    }
+
+    @GetMapping("/noticeInfo")
+    public Mono<String> noticeInfo(@RequestParam("nSeq") String nSeq, Model model) {
+        return noticeService.getNoticeInfo(lookup(nSeq), true)
+                .map(notice -> {
+                    model.addAttribute("rDTO", notice);
+                    return "notice/noticeInfo";
+                });
+    }
+
+    @GetMapping("/noticeEditInfo")
+    public Mono<String> noticeEditInfo(@RequestParam("nSeq") String nSeq, Model model) {
+        return noticeService.getNoticeInfo(lookup(nSeq), false)
+                .map(notice -> {
+                    model.addAttribute("rDTO", notice);
+                    return "notice/noticeEditInfo";
+                });
+    }
+
+    @ResponseBody
+    @PostMapping("/noticeUpdate")
+    public Mono<MsgDTO> noticeUpdate(ServerWebExchange exchange) {
+        return exchange.getFormData()
+                .map(form -> toNotice(form, true))
+                .flatMap(noticeService::updateNoticeInfo)
+                .thenReturn(success("수정되었습니다."));
+    }
+
+    @ResponseBody
+    @PostMapping("/noticeDelete")
+    public Mono<MsgDTO> noticeDelete(ServerWebExchange exchange) {
+        return exchange.getFormData()
+                .map(form -> lookup(form.getFirst("nSeq")))
                 .flatMap(noticeService::deleteNoticeInfo)
-                .thenReturn(MsgDTO.builder().msg("삭제되었습니다.").build())
-                .doFinally(signalType -> log.info("{}.noticeDelete End!", getClass().getName()));
+                .thenReturn(success("삭제되었습니다."));
+    }
+
+    private NoticeDTO lookup(String value) {
+        return NoticeDTO.builder().noticeSeq(parseNoticeSeq(value)).build();
+    }
+
+    private NoticeDTO toNotice(MultiValueMap<String, String> form, boolean update) {
+        String title = requireText(form.getFirst("title"), "제목", 200);
+        String contents = requireText(form.getFirst("contents"), "내용", 4000);
+        String noticeYn = form.getFirst("noticeYn");
+        if (!"Y".equals(noticeYn) && !"N".equals(noticeYn)) {
+            throw badRequest("공지글 여부는 Y 또는 N이어야 합니다.");
+        }
+        return NoticeDTO.builder()
+                .noticeSeq(update ? parseNoticeSeq(form.getFirst("nSeq")) : null)
+                .title(title)
+                .contents(contents)
+                .noticeYn(noticeYn)
+                .userId(demoUserId)
+                .build();
+    }
+
+    private static Long parseNoticeSeq(String value) {
+        try {
+            long id = Long.parseLong(value);
+            if (id > 0) {
+                return id;
+            }
+        } catch (NumberFormatException | NullPointerException ignored) {
+            // 유효하지 않은 값은 공통 400 응답으로 처리한다.
+        }
+        throw badRequest("유효한 공지사항 번호가 필요합니다.");
+    }
+
+    private static String requireText(String value, String field, int maxUtf8Bytes) {
+        if (value == null || value.isBlank()) {
+            throw badRequest(field + "을(를) 입력해 주세요.");
+        }
+        String normalized = value.trim();
+        if (normalized.getBytes(StandardCharsets.UTF_8).length > maxUtf8Bytes) {
+            throw badRequest(field + "은(는) UTF-8 기준 " + maxUtf8Bytes + "바이트 이하여야 합니다.");
+        }
+        return normalized;
+    }
+
+    private static ResponseStatusException badRequest(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    private static MsgDTO success(String message) {
+        return MsgDTO.builder().result(1).msg(message).build();
     }
 }
