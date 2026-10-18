@@ -1,130 +1,107 @@
-# 🌱 SpringWebFlux
+# SpringWebFlux
 
-**Spring Boot 3.x · Java 17** 기반의 **리액티브 프로그래밍(WebFlux) 학습 프로젝트**입니다.  
-공지사항(Notice) CRUD를 Reactive Repository 기반으로 구현했으며,  
-RDBMS와 Reactive Stream을 활용한 비동기/논블로킹 웹 애플리케이션 예제입니다.  
+Spring Boot **4.1.1**, Java **17**, Spring WebFlux, Spring Data R2DBC, MariaDB, Thymeleaf 기반의 **리액티브 게시판 실습**입니다.
 
-<p align="left">
-  <img alt="java" src="https://img.shields.io/badge/Java-17-007396?logo=openjdk&logoColor=white">
-  <img alt="spring-boot" src="https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white">
-  <img alt="webflux" src="https://img.shields.io/badge/Spring-WebFlux-00BFAE?logo=spring&logoColor=white">
-  <img alt="reactive" src="https://img.shields.io/badge/Reactive-Programming-purple">
-  <img alt="build" src="https://img.shields.io/badge/Build-Gradle-02303A?logo=gradle&logoColor=white">
-</p>
+## 학습 내용
 
----
+- WebFlux: `Mono`, `Flux`, 비동기 HTTP 요청 처리
+- ReactiveCrudRepository: 논블로킹 공지사항 조회 및 등록
+- R2DBC: MariaDB 리액티브 데이터 접근
+- Thymeleaf: 서버 렌더링 화면과 Ajax 기반 CRUD
+- 데이터 검증: 필수 값, UTF-8 바이트 제한, 잘못된 ID(400), 없는 게시글(404)
+- 테스트: Mockito + Reactor `StepVerifier`로 DB 없이 서비스와 입력 처리 테스트
 
-## ✨ 주요 기능
-- **공지사항(Notice)**
-  - 등록, 수정, 삭제, 조회
-  - ReactiveCrudRepository 기반 비동기 DB 처리
-- **Reactive API**
-  - Controller → Service → Repository 전 구간 WebFlux 적용
-- **DTO 기반 응답**
-  - `NoticeDTO`, `MsgDTO` 로 API 응답 표준화
-- **유틸리티**
-  - `CmmUtil`, `DateUtil` 제공
+> **주의: 본 저장소는 인증·인가 기능이 없는 공개 CRUD 교육용 예제입니다.** 모든 사용자가 동일한 데모 사용자(`USER01`)로 게시글을 등록·수정·삭제할 수 있습니다. 운영 환경에 공개 배포하지 마세요. 운영 환경에서는 Spring Security 기반 로그인, 서버 측 작성자 권한 검사, CSRF 대응 등을 별도로 구현해야 합니다.
 
----
+## 요구 사항
 
-## 🧱 기술 스택
-- **Spring Boot 3.x**
-- **Spring WebFlux**
-- **ReactiveCrudRepository**
-- **R2DBC (DB Reactive 연동)**
-- **Gradle**
-- **Lombok**
+- JDK 17 이상 (실습 기본: 17)
+- Gradle Wrapper 8.14.3 (`./gradlew` 사용)
+- MariaDB 서버 (R2DBC 드라이버는 Gradle이 설치)
+- 실행 시 데이터베이스 접속 계정과 비밀번호
 
----
+## 데이터베이스 준비
 
-## 📁 프로젝트 구조(요약)
-```
-SpringWebFlux/
-├─ src/main/java/kopo/poly/
-│  ├─ controller/     # NoticeController (REST API)
-│  ├─ domain/         # Notice 엔티티
-│  ├─ dto/            # NoticeDTO, MsgDTO
-│  ├─ repository/     # NoticeRepository (ReactiveCrudRepository)
-│  ├─ service/        # INoticeService (+ impl)
-│  └─ util/           # CmmUtil, DateUtil
-├─ src/main/resources/
-│  ├─ application.yaml
-│  ├─ logback.xml
-│  ├─ static/
-│  └─ templates/
-├─ sql/               # DB 초기화 스크립트 (db.sql, notice.sql, user_info.sql)
-├─ build.gradle, settings.gradle
-```
+MariaDB에서 데이터베이스를 만들고 `sql/notice.sql`의 테이블 생성 SQL을 실행합니다.
 
----
-
-## ⚙️ 빠른 시작
-### 1) 필수 요건
-- **JDK 17**
-- **Gradle 8.x+**
-- **MariaDB 10.x+** (R2DBC 드라이버 필요)
-
-### 2) DB 준비
 ```sql
-CREATE DATABASE webfluxDB DEFAULT CHARACTER SET utf8mb4;
-CREATE USER 'poly'@'%' IDENTIFIED BY '강력한비밀번호';
-GRANT ALL PRIVILEGES ON webfluxDB.* TO 'poly'@'%';
-FLUSH PRIVILEGES;
+CREATE DATABASE IF NOT EXISTS webfluxDB CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE webfluxDB;
+-- 이후 sql/notice.sql 실행
 ```
 
-### 3) 환경설정
-`src/main/resources/application.yaml` 예시:
-```yaml
-spring:
-  r2dbc:
-    url: r2dbc:mariadb://localhost:3306/webfluxDB
-    username: poly
-    password: ********
-  sql:
-    init:
-      mode: always
+연결 계정 `poly`에게 `webfluxDB`에 대한 권한을 부여하거나, 이미 권한이 있는 계정을 이용합니다. 비밀번호를 Git 저장소에 입력하지 마세요.
 
-logging:
-  level:
-    org.springframework.r2dbc: DEBUG
-```
+## 환경 변수
 
-### 4) 실행
+기본 설정(`src/main/resources/application.yaml`):
+
+| 변수 | 기본값 | 설명 |
+| --- | --- | --- |
+| `DB_R2DBC_URL` | `r2dbc:mariadb://localhost:3306/webfluxDB` | MariaDB R2DBC URL |
+| `DB_USERNAME` | `poly` | DB 사용자 |
+| `DB_PASSWORD` | (빈 값) | DB 비밀번호: 실행 전 설정 권장 |
+| `SERVER_PORT` | `11000` | 웹 서버 포트 |
+| `DEMO_USER_ID` | `USER01` | 모든 방문자가 공유하는 교육용 사용자 ID |
+
+Linux/macOS 예시:
+
 ```bash
+export DB_USERNAME=poly
+export DB_PASSWORD='실제_DB_비밀번호'
 ./gradlew bootRun
 ```
 
----
+Windows PowerShell 예시:
 
-## 🧪 빠른 점검(Quick Test)
-### 공지 등록
-```bash
-curl -X POST http://localhost:8080/notice/reg   -H "Content-Type: application/json"   -d '{"title":"공지사항","contents":"내용입니다"}'
+```powershell
+$env:DB_USERNAME = 'poly'
+$env:DB_PASSWORD = '실제_DB_비밀번호'
+.\gradlew.bat bootRun
 ```
 
-### 공지 목록 조회
+실행 후 `http://localhost:11000/notice/noticeList`에 접속합니다.
+
+## 화면과 API (실제 코드 기준)
+
+| 메서드 | URL | 설명 |
+| --- | --- | --- |
+| GET | `/notice/noticeList` | 목록 |
+| GET | `/notice/noticeReg` | 등록 화면 |
+| POST | `/notice/noticeInsert` | 등록 (`title`, `contents`, `noticeYn`) |
+| GET | `/notice/noticeInfo?nSeq=1` | 상세 및 조회수 증가 |
+| GET | `/notice/noticeEditInfo?nSeq=1` | 수정 화면, 조회수는 유지 |
+| POST | `/notice/noticeUpdate` | 수정 (`nSeq`, `title`, `contents`, `noticeYn`) |
+| POST | `/notice/noticeDelete` | 삭제 (`nSeq`) |
+
+`noticeYn` 값은 `Y` 또는 `N`입니다. 등록/수정/삭제에 성공하면 `{"result":1,"msg":"..."}` 형태의 JSON을 반환합니다. 유효하지 않은 입력은 HTTP 400, 존재하지 않는 게시글은 HTTP 404를 반환합니다.
+
+등록 예시:
+
 ```bash
-curl http://localhost:8080/notice/list
+curl -i -X POST http://localhost:11000/notice/noticeInsert \
+  -d 'title=Hello' -d 'contents=WebFlux' -d 'noticeYn=N'
 ```
 
-### 공지 상세 조회
+삭제 예시:
+
 ```bash
-curl http://localhost:8080/notice/{noticeId}
+curl -i -X POST http://localhost:11000/notice/noticeDelete -d 'nSeq=1'
 ```
 
-### 공지 삭제
+## 테스트와 점검
+
 ```bash
-curl -X DELETE http://localhost:8080/notice/{noticeId}
+./gradlew --no-daemon clean test
+./gradlew --no-daemon bootJar
 ```
 
----
+`.github/workflows/gradle.yml`에서도 GitHub Actions를 통해 Java 17 테스트를 실행하도록 구성했습니다. 단위 테스트는 데이터베이스 없이 실행됩니다. **실제 MariaDB와 연계한 통합 테스트는 별도로 수행해야 합니다.**
 
-## 📜 라이선스
-- 본 저장소는 **Apache-2.0** 라이선스를 따릅니다.  
+## 주의사항
 
----
-
-## 🙋‍♀️ 문의
-- **한국폴리텍대학 서울강서캠퍼스 빅데이터소프트웨어과**  
-- **이협건 교수** · hglee67@kopo.ac.kr  
-- 입학 상담 오픈채팅방: <https://open.kakao.com/o/gEd0JIad>
+- `NoticeController`는 교육용 데모 사용자만 사용하며 로그인/세션을 인증으로 취급하지 않습니다.
+- Repository의 조회수 갱신과 삭제는 `@Modifying`을 사용하여 영향받은 행 수를 확인합니다.
+- 공지사항 수정 시 최초 등록자/등록일과 조회수를 유지합니다.
+- 클라이언트와 서버에서 동일하게 UTF-8 바이트 기준(제목 200B, 내용 4000B)으로 제한합니다.
+- MariaDB 스키마의 `notice_seq`는 `AUTO_INCREMENT`이므로 새 게시글 저장 시 ID를 설정하지 않습니다.
