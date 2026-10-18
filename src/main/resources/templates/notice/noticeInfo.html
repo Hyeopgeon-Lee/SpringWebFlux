@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
 
@@ -8,9 +8,7 @@
     <script type="text/javascript" src="/js/jquery-3.6.0.min.js"></script>
     <script th:inline="javascript">
         /*<![CDATA[*/
-        const session_user_id = [[${session.SESSION_USER_ID}]]; // Controller에서 받은 세션에 저장된 값
-        const user_id = [[${rDTO.userId}]]; // 공지사항 게시글 작성자 아이디
-        const nSeq = [[${rDTO.noticeSeq}]]; // 현재 글번호, 자바에서 받을 변수들은 자바스크립트 변수로 저장하면 편함
+        const nSeq = [[${rDTO.noticeSeq}]];
 
         // HTML로딩이 완료되고, 실행됨
         $(document).ready(function () {
@@ -30,47 +28,28 @@
             })
         })
 
-        //수정하기
+        // 교육용 공개 CRUD 데모: 로그인/작성자 인가 기능 없음.
         function doEdit() {
-            if (session_user_id === user_id) {
-                location.href = "/notice/noticeEditInfo?nSeq=" + nSeq;
-
-            } else if (session_user_id === "") {
-                alert("로그인 하시길 바랍니다.");
-
-            } else {
-                alert("본인이 작성한 글만 수정 가능합니다.");
-
-            }
+            location.href = "/notice/noticeEditInfo?nSeq=" + nSeq;
         }
 
-        //삭제하기
         function doDelete() {
-            if (session_user_id === user_id) {
-                if (confirm("작성한 글을 삭제하시겠습니까?")) {
-
-                    // Ajax 호출해서 글 삭제하기
-                    $.ajax({
-                            url: "/notice/noticeDelete",
-                            type: "post", // 전송방식은 Post
-                            dataType: "JSON", // 전송 결과는 JSON으로 받기
-                            data: {"nSeq": nSeq}, // form 태그 내 input 등 객체를 자동으로 전송할 형태로 변경하기
-                            success:
-                                function (json) { // /notice/noticeDelete 호출이 성공했다면..
-                                    alert(json.msg); // 메시지 띄우기
-                                    location.href = "/noticeList"; // 공지사항 리스트 이동
-                                }
-                        }
-                    )
+            if (!confirm("작성한 글을 삭제하시겠습니까?")) return;
+            $.ajax({
+                url: "/notice/noticeDelete",
+                type: "POST",
+                dataType: "json",
+                data: {nSeq: nSeq}
+            }).done(function (json) {
+                if (json.result !== 1) {
+                    alert("삭제 처리에 실패했습니다.");
+                    return;
                 }
-
-            } else if (session_user_id === "") {
-                alert("로그인 하시길 바랍니다.");
-
-            } else {
-                alert("본인이 작성한 글만 수정 가능합니다.");
-
-            }
+                alert(json.msg);
+                location.href = "/notice/noticeList";
+            }).fail(function () {
+                alert("공지사항 삭제 중 오류가 발생했습니다.");
+            });
         }
 
         /*]]>*/
