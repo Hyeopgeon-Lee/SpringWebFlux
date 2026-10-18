@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <title>게시판 글쓰기</title>
@@ -17,9 +17,7 @@
 
         // 글자 길이를 바이트 단위로 계산
         function calculateBytes(str) {
-            return [...str].reduce((total, char) => {
-                return total + (char.charCodeAt(0) > 127 ? 2 : 1);
-            }, 0);
+            return new TextEncoder().encode(str).length;
         }
 
         // 공지사항 저장하기
